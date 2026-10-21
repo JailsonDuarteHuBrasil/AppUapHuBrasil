@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desconto de Horas Expiradas | UAP/Divgp - Ebserh HULW</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .info-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+            padding: 1.5rem;
+            border-radius: var(--radius-md);
+            border-left: 4px solid var(--ebserh-blue);
+            margin-bottom: 1.5rem;
+        }
+        .formula-section {
+            background: var(--gray-100);
+            padding: 1rem;
+            border-radius: var(--radius-sm);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin-top: 0.75rem;
+            text-align: center;
+            font-weight: bold;
+            color: var(--ebserh-blue);
+        }
+        .rubric-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .rubric-table th {
+            background: var(--ebserh-blue);
+            color: white;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .rubric-table td {
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--gray-200);
+            vertical-align: middle;
+        }
+        .rubric-table tr:last-child td { border-bottom: none; }
+        .rubric-table tr:hover td { background: var(--gray-50); }
+        .subtotal-row td {
+            background: var(--ebserh-blue-light) !important;
+            font-weight: 700;
+            color: var(--ebserh-blue);
+            border-top: 2px solid var(--ebserh-blue);
+        }
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .result-box {
+            background: var(--gray-50);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+            border: 1px solid var(--gray-200);
+        }
+        .result-box .rb-label { font-size: 0.78rem; color: var(--gray-600); margin-bottom: 0.4rem; }
+        .result-box .rb-value { font-size: 1.2rem; font-weight: 700; color: var(--ebserh-blue); }
+        .result-box.highlight .rb-value { color: var(--error); font-size: 1.4rem; }
+        .accordion-container { margin-bottom: 1.5rem; }
+        .accordion-item {
+            border-left: 4px solid var(--ebserh-blue);
+            border-radius: var(--radius-sm);
+            margin-bottom: 0.75rem;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        .accordion-header {
+            background: var(--gray-50);
+            padding: 0.85rem 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: var(--ebserh-blue);
+            user-select: none;
+        }
+        .accordion-header:hover { background: var(--gray-100); }
+        .accordion-content {
+            padding: 1rem 1.25rem;
+            font-size: 0.9rem;
+            line-height: 1.7;
+            color: var(--gray-700);
+        }
+        .res-highlight {
+            margin-top: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            background: var(--ebserh-blue-light);
+            border-radius: var(--radius-sm);
+            font-weight: 700;
+            color: var(--ebserh-blue);
+        }
+        .hours-panel {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-md);
+            padding: 1.25rem;
+        }
+        .time-sep { font-weight: 700; font-size: 1.1rem; color: var(--gray-500); }
+    </style>
+</head>
+
+<body>
+    <div id="navbar-container"></div>
+
+    <main class="main-content">
+        <div class="content-wrapper" id="capture-area">
+
+            <header class="page-header">
+                <h1 class="page-title">Desconto de Horas Expiradas</h1>
+                <p class="page-subtitle">Apuracao do valor a descontar em folha por horas nao cumpridas / expiradas</p>
+            </header>
+
+            <div class="info-box">
+                <h3 style="margin-top: 0; color: var(--ebserh-blue);">&#x2139;&#xFE0F; Como funciona o calculo</h3>
+                <p style="margin-bottom: 0.5rem;">
+                    O valor do desconto e obtido dividindo a <strong>Base de Geracao</strong> pela
+                    <strong>Carga Horaria Mensal</strong> para encontrar o <em>valor unitario da hora</em>,
+                    e em seguida multiplicando pelo <strong>total de horas expiradas</strong>.
+                </p>
+                <div class="formula-section">
+                    Valor da Hora = Base de Geracao / Carga Horaria Mensal<br>
+                    Desconto = Valor da Hora &times; Horas Expiradas
+                </div>
+            </div>
+
+            <!-- Dados do Servidor -->
+            <div class="card">
+                <h2 class="card-header">Dados do Servidor</h2>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label class="form-label">Nome do Servidor</label>
+                        <input type="text" id="nome" class="form-input" placeholder="Ex: Joao da Silva">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Matricula</label>
+                        <input type="text" id="matricula" class="form-input" placeholder="Ex: 1001954">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Competencia (mes/ano)</label>
+                        <input type="text" id="competencia" class="form-input" placeholder="Ex: 10/2026">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Composicao da Base de Geracao -->
+            <div class="card">
+                <h2 class="card-header">Composicao da Base de Geracao</h2>
+                <p style="color: var(--gray-600); margin-bottom: 1rem; font-size: 0.9rem;">
+                    Informe os valores das rubricas que compoem a base de calculo do desconto.
+                    Preencha apenas as rubricas aplicaveis ao servidor.
+                </p>
+
+                <table class="rubric-table" id="rubric-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 90px;">Rubrica</th>
+                            <th>Descricao</th>
+                            <th style="width: 160px;">Valor (R$)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rubric-body"></tbody>
+                    <tfoot>
+                        <tr class="subtotal-row">
+                            <td colspan="2" style="text-align: right;">BASE DE GERACAO (Salario + Outros Beneficios)</td>
+                            <td id="td-base-total" style="font-size: 1rem;">R$ 0,00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div style="margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end;">
+                    <div class="form-group" style="flex: 0 0 100px; margin-bottom: 0;">
+                        <label class="form-label">Cod. Rubrica</label>
+                        <input type="text" id="new-cod" class="form-input" placeholder="Ex: 00999">
+                    </div>
+                    <div class="form-group" style="flex: 1; min-width: 160px; margin-bottom: 0;">
+                        <label class="form-label">Descricao</label>
+                        <input type="text" id="new-desc" class="form-input" placeholder="Ex: Gratificacao Especifica">
+                    </div>
+                    <div style="margin-bottom: 0;">
+                        <button class="btn btn-secondary" onclick="adicionarRubricaCustom()" style="height: 42px;">
+                            + Adicionar Rubrica
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parametros do calculo -->
+            <div class="card">
+                <h2 class="card-header">Parametros do Calculo</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Carga Horaria Mensal (horas)</label>
+                        <input type="number" id="carga-horaria" class="form-input" value="220" min="1" step="1"
+                            oninput="atualizarSubtotais()">
+                        <small class="form-help">Divisor do mes (ex: 220, 200, 180, 150, 120)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Horas Expiradas</label>
+                        <div style="display:flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                            <div class="hours-panel" style="flex: 1; min-width: 200px; padding: 0.75rem;">
+                                <label style="font-size: 0.78rem; color: var(--gray-500); margin-bottom: 0.4rem; display:block;">
+                                    Formato HH:MM
+                                </label>
+                                <div style="display:flex; align-items:center; gap: 0.4rem;">
+                                    <input type="number" id="he-horas" class="form-input" placeholder="HH"
+                                        min="0" max="999" step="1" oninput="sincronizarHoras('hhMM')"
+                                        style="width: 70px; text-align: center;">
+                                    <span class="time-sep">:</span>
+                                    <input type="number" id="he-minutos" class="form-input" placeholder="MM"
+                                        min="0" max="59" step="1" oninput="sincronizarHoras('hhMM')"
+                                        style="width: 70px; text-align: center;">
+                                </div>
+                            </div>
+                            <div style="color: var(--gray-400); font-size: 0.85rem;">ou</div>
+                            <div class="hours-panel" style="flex: 1; min-width: 160px; padding: 0.75rem;">
+                                <label style="font-size: 0.78rem; color: var(--gray-500); margin-bottom: 0.4rem; display:block;">
+                                    Decimal (ex: 1.5 = 1h30)
+                                </label>
+                                <input type="number" id="he-decimal" class="form-input" placeholder="0.00"
+                                    step="0.01" min="0" oninput="sincronizarHoras('decimal')">
+                            </div>
+                        </div>
+                        <small class="form-help">Preencha HH:MM ou o valor decimal. Os dois campos se sincronizam automaticamente.</small>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary btn-block btn-lg" onclick="calcularDesconto()">
+                CALCULAR DESCONTO
+            </button>
+
+            <!-- Resultado -->
+            <div id="result-area" style="display: none; margin-top: 2rem;">
+                <div class="result-grid">
+                    <div class="result-box">
+                        <div class="rb-label">Base de Geracao</div>
+                        <div class="rb-value" id="rb-base">R$ 0,00</div>
+                    </div>
+                    <div class="result-box">
+                        <div class="rb-label">Carga Horaria Mensal</div>
+                        <div class="rb-value" id="rb-carga">0 h</div>
+                    </div>
+                    <div class="result-box">
+                        <div class="rb-label">Valor da Hora</div>
+                        <div class="rb-value" id="rb-valor-hora">R$ 0,00</div>
+                    </div>
+                    <div class="result-box">
+                        <div class="rb-label">Horas Expiradas</div>
+                        <div class="rb-value" id="rb-horas-exp">0 h</div>
+                    </div>
+                    <div class="result-box highlight">
+                        <div class="rb-label">Valor do Desconto</div>
+                        <div class="rb-value" id="rb-desconto">R$ 0,00</div>
+                    </div>
+                </div>
+
+                <h3 style="text-align: center; color: var(--ebserh-blue); margin-bottom: 1.5rem;">
+                    MEMORIA DE CALCULO
+                </h3>
+                <div class="accordion-container" id="step-by-step"></div>
+
+                <div class="total-banner">
+                    <span class="total-label">VALOR TOTAL DO DESCONTO</span>
+                    <span id="final-total" class="total-value">R$ 0,00</span>
+                </div>
+
+                <div class="form-row" style="margin-top: 2rem; gap: 1rem;">
+                    <button class="btn btn-danger btn-block" onclick="baixarPDF()">
+                        SALVAR EM PDF
+                    </button>
+                    <button class="btn btn-secondary btn-block" onclick="resetarFormulario()">
+                        LIMPAR CAMPOS
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="js/main.js"></script>
+    <script>
+        const rubricasPadrao = [
+            { cod: '00003', desc: 'SALARIO - CLT' },
+            { cod: '00035', desc: 'GRAT. RAIO X - CLT' },
+            { cod: '00053', desc: 'ADIC. INSALUBRIDADE (Pessoal Requisitado)' },
+            { cod: '00064', desc: 'GRATIFICACAO DE RAIO X' },
+            { cod: '00067', desc: 'ADICIONAL DE PERICULOSIDADE' },
+            { cod: '00133', desc: 'ADIC. DE INSALUBRIDADE' },
+            { cod: '00135', desc: 'ADIC. DE PERICULOSIDADE' },
+            { cod: '00137', desc: 'INSALUBRIDADE S/ VINCULO' },
+            { cod: '00269', desc: 'REM. FUNCAO DE CONFIANCA' },
+            { cod: '00301', desc: 'GRAT. CARGO COMISSIONADO' },
+            { cod: '00420', desc: 'DIF. REMUN. DECISAO JUDICIAL' },
+            { cod: '00825', desc: 'GRAT. RAIO X - CDT/CLT' },
+            { cod: '82404', desc: 'ADIC. DE INSALUBRIDADE (Contrato Temporario)' },
+            { cod: '82405', desc: 'ADIC. DE PERICULOSIDADE (Contrato Temporario)' },
+            { cod: '82842', desc: 'CONT. TEMPORARIO CLT - EBSERH' },
+        ];
+
+        function init() {
+            const tbody = document.getElementById('rubric-body');
+            tbody.innerHTML = rubricasPadrao.map(r => `
+                <tr>
+                    <td><strong>${r.cod}</strong></td>
+                    <td>${r.desc}</td>
+                    <td><input type="text" id="val-${r.cod}" class="form-input rubric-val"
+                        data-desc="${r.desc}" data-cod="${r.cod}"
+                        placeholder="0,00" oninput="onRubricInput(this)"></td>
+                </tr>
+            `).join('');
+        }
+
+        function adicionarRubricaCustom() {
+            const cod  = document.getElementById('new-cod').value.trim();
+            const desc = document.getElementById('new-desc').value.trim();
+            if (!cod || !desc) { alert('Informe o codigo e a descricao da rubrica.'); return; }
+            const tbody = document.getElementById('rubric-body');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${cod}</strong></td>
+                <td>${desc} <span style="font-size:0.75rem; color:var(--gray-500);">(adicionado)</span></td>
+                <td><input type="text" id="val-custom-${cod}" class="form-input rubric-val"
+                    data-desc="${desc}" data-cod="${cod}"
+                    placeholder="0,00" oninput="onRubricInput(this)"></td>
+            `;
+            tbody.appendChild(tr);
+            document.getElementById('new-cod').value  = '';
+            document.getElementById('new-desc').value = '';
+        }
+
+        function onRubricInput(input) {
+            let raw = input.value.replace(/\D/g, '');
+            if (raw !== '') {
+                input.value = (parseFloat(raw) / 100).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2, maximumFractionDigits: 2
+                });
+            }
+            atualizarSubtotais();
+        }
+
+        function parseNumber(str) {
+            if (!str) return 0;
+            return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function atualizarSubtotais() {
+            const total = somarRubricas().soma;
+            document.getElementById('td-base-total').innerText = fmt(total);
+        }
+
+        function somarRubricas() {
+            const inputs = document.querySelectorAll('.rubric-val');
+            let soma = 0, detalhes = [];
+            inputs.forEach(inp => {
+                const val = parseNumber(inp.value);
+                if (val > 0) {
+                    soma += val;
+                    detalhes.push({ cod: inp.dataset.cod, desc: inp.dataset.desc, valor: val });
+                }
+            });
+            return { soma, detalhes };
+        }
+
+        function fmt(v) {
+            return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function sincronizarHoras(origem) {
+            if (origem === 'hhMM') {
+                const h = parseInt(document.getElementById('he-horas').value   || 0);
+                const m = parseInt(document.getElementById('he-minutos').value || 0);
+                const decimal = h + (m / 60);
+                document.getElementById('he-decimal').value = decimal > 0 ? decimal.toFixed(4) : '';
+            } else {
+                const dec = parseFloat(document.getElementById('he-decimal').value || 0);
+                const totalMinutos = Math.round(dec * 60);
+                document.getElementById('he-horas').value   = Math.floor(totalMinutos / 60) || '';
+                document.getElementById('he-minutos').value = (totalMinutos % 60) || '';
+            }
+        }
+
+        function obterHorasDecimal() {
+            return parseFloat(document.getElementById('he-decimal').value || 0);
+        }
+
+        function formatarHorasHHMM(decimal) {
+            const totalMin = Math.round(decimal * 60);
+            const h = Math.floor(totalMin / 60);
+            const m = totalMin % 60;
+            return h + 'h ' + m.toString().padStart(2, '0') + 'min (' + decimal.toFixed(4) + ' h)';
+        }
+
+        function calcularDesconto() {
+            const { soma: base, detalhes } = somarRubricas();
+            const carga    = parseFloat(document.getElementById('carga-horaria').value || 1);
+            const horasExp = obterHorasDecimal();
+
+            if (base === 0)      { alert('Informe ao menos um valor na Base de Geracao.'); return; }
+            if (horasExp <= 0)   { alert('Informe a quantidade de horas expiradas.');      return; }
+
+            const valorHora   = base / carga;
+            const desconto    = valorHora * horasExp;
+            const nome        = document.getElementById('nome').value       || '-';
+            const matricula   = document.getElementById('matricula').value   || '-';
+            const competencia = document.getElementById('competencia').value || '-';
+
+            document.getElementById('rb-base').innerText       = fmt(base);
+            document.getElementById('rb-carga').innerText      = carga + ' h';
+            document.getElementById('rb-valor-hora').innerText = fmt(valorHora);
+            document.getElementById('rb-horas-exp').innerText  = formatarHorasHHMM(horasExp);
+            document.getElementById('rb-desconto').innerText   = fmt(desconto);
+            document.getElementById('final-total').innerText   = fmt(desconto);
+
+            const rubricasHTML = detalhes.length > 0
+                ? detalhes.map(d => '&bull; <strong>' + d.cod + '</strong> - ' + d.desc + ': ' + fmt(d.valor)).join('<br>')
+                : 'Nenhuma rubrica informada.';
+
+            document.getElementById('step-by-step').innerHTML = `
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>Etapa 1 - Identificacao do Servidor</span>
+                        <span class="accordion-icon">&#9650;</span>
+                    </div>
+                    <div class="accordion-content" style="display: block;">
+                        <strong>Nome:</strong> ${nome}<br>
+                        <strong>Matricula:</strong> ${matricula}<br>
+                        <strong>Competencia:</strong> ${competencia}
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>Etapa 2 - Composicao da Base de Geracao</span>
+                        <span class="accordion-icon">&#9650;</span>
+                    </div>
+                    <div class="accordion-content" style="display: block;">
+                        ${rubricasHTML}
+                        <div class="res-highlight">Base de Geracao Total = ${fmt(base)}</div>
+                    </div>
+                </div>
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>Etapa 3 - Valor Unitario da Hora</span>
+                        <span class="accordion-icon">&#9650;</span>
+                    </div>
+                    <div class="accordion-content" style="display: block;">
+                        Formula: Base de Geracao / Carga Horaria Mensal<br>
+                        Calculo: ${fmt(base)} / ${carga} h<br>
+                        <div class="res-highlight">Valor da Hora = ${fmt(valorHora)}</div>
+                    </div>
+                </div>
+                <div class="accordion-item" style="border-left-color: var(--error);">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        <span>Etapa 4 - Calculo do Desconto por Horas Expiradas</span>
+                        <span class="accordion-icon">&#9650;</span>
+                    </div>
+                    <div class="accordion-content" style="display: block;">
+                        Formula: Valor da Hora x Horas Expiradas<br>
+                        Horas expiradas: ${formatarHorasHHMM(horasExp)}<br>
+                        Calculo: ${fmt(valorHora)} x ${horasExp.toFixed(4)} h<br>
+                        <div class="res-highlight" style="color: var(--error); font-size: 1.15rem;">
+                            Desconto Total = ${fmt(desconto)}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('result-area').style.display = 'block';
+            document.getElementById('result-area').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleAccordion(header) {
+            const content = header.nextElementSibling;
+            const icon    = header.querySelector('.accordion-icon');
+            if (content.style.display === 'block') {
+                content.style.display = 'none';
+                icon.innerHTML = '&#9660;';
+            } else {
+                content.style.display = 'block';
+                icon.innerHTML = '&#9650;';
+            }
+        }
+
+        function baixarPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const nome        = document.getElementById('nome').value        || '-';
+            const matricula   = document.getElementById('matricula').value    || '-';
+            const competencia = document.getElementById('competencia').value  || '-';
+            const carga       = document.getElementById('carga-horaria').value || '220';
+            const horasExp    = obterHorasDecimal();
+            const { soma: base, detalhes } = somarRubricas();
+            const valorHora = base / parseFloat(carga);
+            const desconto  = valorHora * horasExp;
+
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text('Ebserh - Hospital Universitario Lauro Wanderley', 10, 15);
+            doc.setFontSize(12);
+            doc.text('Demonstrativo de Desconto - Horas Expiradas', 10, 22);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.text('Emitido em: ' + new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR'), 10, 28);
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Servidor:',    10, 36);
+            doc.text('Matricula:',   10, 42);
+            doc.text('Competencia:', 10, 48);
+            doc.setFont('helvetica', 'normal');
+            doc.text(nome,        32, 36);
+            doc.text(matricula,   32, 42);
+            doc.text(competencia, 32, 48);
+
+            const tableData = detalhes.map(d => [d.cod, d.desc, fmt(d.valor)]);
+            doc.autoTable({
+                startY: 55,
+                head: [['Rubrica', 'Descricao', 'Valor (R$)']],
+                body: tableData.length > 0 ? tableData : [['-', 'Nenhuma rubrica preenchida', '-']],
+                theme: 'grid',
+                headStyles: { fillColor: [0, 82, 155] },
+                styles: { fontSize: 9 }
+            });
+
+            let y = doc.lastAutoTable.finalY + 8;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('Memoria de Calculo:', 10, y); y += 6;
+            doc.setFont('helvetica', 'normal');
+            doc.text('Base de Geracao:       ' + fmt(base),               10, y); y += 6;
+            doc.text('Carga Horaria Mensal:  ' + carga + ' h',            10, y); y += 6;
+            doc.text('Valor da Hora:         ' + fmt(valorHora),          10, y); y += 6;
+            doc.text('Horas Expiradas:       ' + formatarHorasHHMM(horasExp), 10, y); y += 10;
+
+            doc.setDrawColor(198, 20, 42);
+            doc.setLineWidth(0.8);
+            doc.rect(10, y - 5, 190, 14);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(198, 20, 42);
+            doc.text('VALOR DO DESCONTO: ' + fmt(desconto), 15, y + 4);
+            doc.setTextColor(0, 0, 0);
+
+            doc.save('Desconto_Horas_Expiradas_' + nome.replace(/\s+/g, '_') + '.pdf');
+        }
+
+        function resetarFormulario() {
+            if (!confirm('Deseja realmente limpar todos os campos?')) return;
+            document.getElementById('nome').value         = '';
+            document.getElementById('matricula').value    = '';
+            document.getElementById('competencia').value  = '';
+            document.getElementById('carga-horaria').value = '220';
+            document.getElementById('he-horas').value    = '';
+            document.getElementById('he-minutos').value  = '';
+            document.getElementById('he-decimal').value  = '';
+            document.querySelectorAll('.rubric-val').forEach(inp => inp.value = '');
+            atualizarSubtotais();
+            document.getElementById('result-area').style.display = 'none';
+        }
+
+        init();
+        atualizarSubtotais();
+    </script>
+</body>
+</html>
