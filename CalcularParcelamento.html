@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora de Parcelamento | UAP/Divgp - Ebserh HULW</title>
+    <title>Calculadora de Parcelamento | UAP/Divgp - HU Brasil</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,7 +46,7 @@
         <div class="content-wrapper">
             <!-- Page Header -->
             <header class="page-header">
-                <h1 class="page-title">Calculadora de Parcelamento – Ebserh</h1>
+                <h1 class="page-title">Calculadora de Parcelamento – HU Brasil</h1>
                 <p class="page-subtitle">Critérios do Item 9 — Cálculo de parcelamento de débitos</p>
             </header>
 
@@ -112,7 +112,7 @@
                 </div>
 
                 <p style="text-align:center; margin-top:2rem; font-size:0.85rem; color:var(--gray-500);">
-                    Uso interno – Ebserh / HULW
+                    Uso interno – HU Brasil /
                 </p>
             </div>
         </div>
@@ -238,10 +238,10 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // Cabeçalho Ebserh
+            // Cabeçalho HU Brasil
             doc.setFont("helvetica", "bold");
             doc.setFontSize(16);
-            doc.text("Ebserh - Hospital Universitário Lauro Wanderley", 10, 15);
+            doc.text("HU Brasil - Hospital Universitário", 10, 15);
             doc.setFontSize(14);
             doc.text("Simulação de Parcelamento de Débito (Item 9)", 10, 22);
             doc.setFont("helvetica", "normal");
@@ -255,7 +255,7 @@
             doc.setFontSize(11);
             doc.text(linhas, 10, 40);
 
-            doc.save("parcelamento_ebserh.pdf");
+            doc.save("parcelamento_HU Brasil.pdf");
         }
     </script>
 </body>

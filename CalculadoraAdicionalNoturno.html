@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Adicional Noturno | UAP/Divgp - Ebserh HULW</title>
+    <title>Calculadora Adicional Noturno | UAP/Divgp - HU Brasil</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -246,7 +246,7 @@
             { codigo: '00825', descricao: 'GRATIFICACAO DE RAIO X - CDT/CLT', fator: 0 },
             { codigo: '82404', descricao: 'ADIC. DE INSALUBRIDADE (Contrato Temporario)', fator: 0 },
             { codigo: '82405', descricao: 'ADIC. DE PERICULOSIDADE (Contrato Temporario)', fator: 0 },
-            { codigo: '82842', descricao: 'CONT. TEMPORARIO CLT - EBSERH', fator: 0 }
+            { codigo: '82842', descricao: 'CONT. TEMPORARIO CLT - HU Brasil', fator: 0 }
         ];
 
         function renderTable() {
@@ -327,10 +327,10 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // Cabeçalho Ebserh
+            // Cabeçalho HU Brasil
             doc.setFont("helvetica", "bold");
             doc.setFontSize(16);
-            doc.text("Ebserh - Hospital Universitário Lauro Wanderley", 10, 15);
+            doc.text("HU Brasil - Hospital Universitário", 10, 15);
             doc.setFontSize(14);
             doc.text("Cálculo de Adicional Noturno (Rubrica 00411)", 10, 22);
             doc.setFont("helvetica", "normal");

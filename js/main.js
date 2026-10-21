@@ -1,5 +1,5 @@
 /**
- * UAP/Divgp - Ebserh HULW
+ * UAP/Divgp - HU Brasil
  * Sistema de Ferramentas Administrativas
  * Main JavaScript Module
  */
@@ -189,7 +189,7 @@ function renderNavigation() {
             <div class="sidebar-header">
                 <div class="sidebar-logo">UAP/Divgp</div>
                 <div class="sidebar-subtitle">Ferramentas Administrativas</div>
-                <div class="sidebar-institution">Ebserh - HULW</div>
+                <div class="sidebar-institution">HU Brasil -</div>
             </div>
             
             <nav>

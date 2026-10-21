@@ -1,14 +1,14 @@
 /* ========================================
-   UAP/Divgp - Ebserh HULW
+   UAP/Divgp - HU Brasil
    Sistema de Ferramentas Administrativas
    ======================================== */
 
 :root {
-    /* Ebserh Brand Colors */
+    /* HU Brasil Brand Colors */
     --ebserh-blue: #003d7a;
     --ebserh-blue-light: #0066cc;
     --ebserh-blue-dark: #002952;
-    --ebserh-accent: #00a8e1;
+    --HU Brasil-accent: #00a8e1;
     
     /* Neutral Colors */
     --gray-50: #f8fafc;

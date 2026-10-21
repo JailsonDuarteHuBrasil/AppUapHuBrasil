@@ -1,5 +1,5 @@
 /**
- * UAP/Divgp - Ebserh HULW
+ * UAP/Divgp - HU Brasil
  * Cálculo de Desconto Proporcional
  * Fórmula: ((Base1 + Base2) / Divisor * Dias)
  */

@@ -1,7 +1,7 @@
 # AppUapHuBrasil
 
 Sistema de Ferramentas Administrativas da **UAP/Divgp** (Unidade de Administração de Pessoal / Divisão de Gestão de Pessoas)  
-**Ebserh – Hospital Universitário Lauro Wanderley (HULW)**
+**HU Brasil – Hospital Universitário Lauro Wanderley **
 
 ## Ferramentas disponíveis
 
@@ -45,4 +45,4 @@ Não é necessário servidor web ou instalação de dependências.
 
 ---
 
-> Desenvolvido pela equipe UAP/Divgp – HULW/Ebserh
+> Desenvolvido pela equipe UAP/Divgp – HU Brasil
