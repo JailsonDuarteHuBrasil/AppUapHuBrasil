@@ -453,6 +453,9 @@
         </div>
 
         <div class="section-title">Evolução Mensal da Folha</div>
+        <p id="payrollImpactNote" style="font-size: 0.9rem; color: var(--text-muted); margin-top: -1rem;">
+            O afastamento de uma competência aparece financeiramente na folha do mês seguinte.
+        </p>
         <div class="monthly-breakdown" id="evolutionGrid">
             <!-- Cards gerados dinamicamente -->
         </div>
@@ -522,6 +525,17 @@
         });
     }
 
+    function updatePayrollImpactNote(dataInicioStr = document.getElementById('data_inicio').value) {
+        const note = document.getElementById('payrollImpactNote');
+        if (!dataInicioStr) {
+            note.innerText = 'O afastamento de uma competência aparece financeiramente na folha do mês seguinte.';
+            return;
+        }
+        const dataInicio = parseLocalDate(dataInicioStr);
+        const folhaImpacto = new Date(dataInicio.getFullYear(), dataInicio.getMonth() + 1, 1);
+        note.innerText = `A licença começa em ${monthsName[dataInicio.getMonth()]}; o primeiro impacto financeiro aparece na folha de ${monthsName[folhaImpacto.getMonth()]} de ${folhaImpacto.getFullYear()}.`;
+    }
+
     function getCompetenceMonths(dataInicioStr = document.getElementById('data_inicio').value) {
         if (!dataInicioStr) return [];
 
@@ -576,10 +590,12 @@
     document.getElementById('data_inicio').addEventListener('change', () => {
         updateMonthLabels();
         updateCompetenceDays();
+        updatePayrollImpactNote();
     });
     document.getElementById('duracao_licenca').addEventListener('change', updateCompetenceDays);
     updateMonthLabels();
     updateCompetenceDays();
+    updatePayrollImpactNote();
 
     function limparDados() {
         document.querySelectorAll('input[type="number"]').forEach(input => {
@@ -598,6 +614,7 @@
         document.getElementById('res_periodo').innerText = '';
         updateMonthLabels();
         updateCompetenceDays();
+        updatePayrollImpactNote();
     }
 
     function calcular() {
@@ -685,7 +702,7 @@
             
             let html = `
                 <div class="month-header">
-                    <span class="month-name">${monthsName[simulMonth.getMonth()]} / ${simulMonth.getFullYear()}</span>
+                    <span class="month-name">Folha de ${monthsName[simulMonth.getMonth()]} / ${simulMonth.getFullYear()}</span>
                     <span style="font-size: 0.75rem; color: var(--text-muted); text-align: right;">Ref: ${monthsName[refMonth.getMonth()]} (divisor: ${divisorRef} dias; ${intervaloRef})</span>
                 </div>
                 <div class="folha-body">
