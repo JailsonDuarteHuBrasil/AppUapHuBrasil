@@ -120,7 +120,7 @@
             font-weight: 500;
         }
 
-        input {
+        input, select {
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid var(--glass-border);
             border-radius: 12px;
@@ -130,7 +130,7 @@
             transition: all 0.3s ease;
         }
 
-        input:focus {
+        input:focus, select:focus {
             outline: none;
             border-color: var(--primary);
             box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
@@ -188,6 +188,28 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
             filter: brightness(1.1);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-clear {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            margin-top: 1rem;
+        }
+
+        .btn-clear:hover {
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .results-container {
@@ -276,6 +298,8 @@
         @media (max-width: 768px) {
             h1 { font-size: 1.8rem; }
             .glass-card { padding: 1.5rem; }
+            .form-actions { flex-direction: column; gap: 0; }
+            .btn-clear { width: 100%; }
         }
     </style>
 </head>
@@ -299,7 +323,14 @@
                 <input type="date" id="data_inicio" value="2025-06-07">
             </div>
             <div class="input-group">
-                <label for="tipo_insalubridade">Insalubridade</label>
+                <label for="duracao_licenca">Duração da licença</label>
+                <select id="duracao_licenca">
+                    <option value="120" selected>120 dias (regra geral)</option>
+                    <option value="180">180 dias (com extensão aplicável)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="val_insalubridade_fixo">Insalubridade</label>
                 <div style="display: flex; gap: 10px;">
                     <input type="number" id="val_insalubridade_fixo" value="400" step="0.01" style="flex: 1;" placeholder="Valor R$">
                 </div>
@@ -316,14 +347,17 @@
 
         <div class="section-title">Histórico de Rubricas Variáveis (Últimos 6 meses)</div>
         <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
-            Informe os valores pagos nos 6 meses que antecedem o início da licença (ex: Dezembro a Maio).
+            Informe os valores efetivamente pagos em cada uma das seis competências anteriores ao início da licença. Para uma competência específica, considere somente o valor recebido no intervalo trabalhado naquela competência.
+        </p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+            Referência: remuneração fixa acrescida da média das parcelas variáveis dos seis meses anteriores (art. 393 da CLT). O prazo geral é de 120 dias; a extensão para 180 dias depende de enquadramento aplicável. Confirme as rubricas e a extensão com o RH.
         </p>
         
         <div class="variable-table-container">
             <table id="variableTable">
                 <thead>
                     <tr>
-                        <th>Rubricas Consideradas (2025)</th>
+                        <th>Rubricas consideradas</th>
                         <th class="month-label" data-offset="-6">Mês -6</th>
                         <th class="month-label" data-offset="-5">Mês -5</th>
                         <th class="month-label" data-offset="-4">Mês -4</th>
@@ -373,7 +407,10 @@
             </table>
         </div>
 
-        <button class="btn-calc" onclick="calcular()">Gerar Relatório de Folhas</button>
+        <div class="form-actions">
+            <button class="btn-calc" type="button" onclick="calcular()">Gerar Relatório de Folhas</button>
+            <button class="btn-clear" type="button" onclick="limparDados()">Limpar dados</button>
+        </div>
     </div>
 
     <div class="results-container" id="results">
@@ -381,7 +418,7 @@
             <div class="section-title">Resumo do Cálculo</div>
             <div class="summary-cards">
                 <div class="summary-card">
-                    <label>Média Variáveis (Σ/6)</label>
+                    <label>Média das variáveis (6 competências)</label>
                     <div id="res_media" class="summary-val">R$ 0,00</div>
                 </div>
                 <div class="summary-card">
@@ -389,8 +426,8 @@
                     <div id="res_sm" class="summary-val" style="color: var(--secondary);">R$ 0,00</div>
                 </div>
                 <div class="summary-card">
-                    <label>Período Total</label>
-                    <div id="res_periodo" class="summary-val" style="font-size: 1.2rem; color: var(--text-main);">180 dias</div>
+                    <label>Período da licença</label>
+                    <div id="res_periodo" class="summary-val" style="font-size: 1.2rem; color: var(--text-main);"></div>
                 </div>
             </div>
         </div>
@@ -419,13 +456,46 @@
         return new Date(year, month + 1, 0).getDate();
     }
 
+    function parseLocalDate(dateString) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    }
+
+    function addDays(date, days) {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+    }
+
+    function daysBetweenInclusive(start, end) {
+        const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
+        const endUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+        return Math.floor((endUtc - startUtc) / 86400000) + 1;
+    }
+
+    function getRangeInMonth(start, end, year, month) {
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month, getDaysInMonth(year, month));
+        const overlapStart = start > monthStart ? start : monthStart;
+        const overlapEnd = end < monthEnd ? end : monthEnd;
+        if (overlapStart > overlapEnd) return null;
+        return {
+            start: overlapStart,
+            end: overlapEnd,
+            days: daysBetweenInclusive(overlapStart, overlapEnd)
+        };
+    }
+
     function updateMonthLabels() {
-        const dataIn = new Date(document.getElementById('data_inicio').value);
-        if (isNaN(dataIn)) return;
-        
+        const dataInicioStr = document.getElementById('data_inicio').value;
         const labels = document.querySelectorAll('.month-label');
         labels.forEach(lbl => {
             const offset = parseInt(lbl.dataset.offset);
+            if (!dataInicioStr) {
+                lbl.innerText = `Mês ${offset}`;
+                return;
+            }
+            const dataIn = parseLocalDate(dataInicioStr);
             const d = new Date(dataIn.getFullYear(), dataIn.getMonth() + offset, 1);
             lbl.innerText = `${monthsName[d.getMonth()]}/${d.getFullYear().toString().substring(2)}`;
         });
@@ -434,82 +504,89 @@
     document.getElementById('data_inicio').addEventListener('change', updateMonthLabels);
     updateMonthLabels();
 
+    function limparDados() {
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.value = '0';
+        });
+        document.getElementById('data_inicio').value = '';
+        document.getElementById('duracao_licenca').value = '120';
+        document.getElementById('rubricasBody').querySelectorAll('.table-input').forEach(input => {
+            input.value = '0';
+        });
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('evolutionGrid').innerHTML = '';
+        document.getElementById('res_media').innerText = formatCurrency(0);
+        document.getElementById('res_sm').innerText = formatCurrency(0);
+        document.getElementById('res_periodo').innerText = '';
+        updateMonthLabels();
+    }
+
     function calcular() {
         const salarioBase = parseFloat(document.getElementById('salario_base').value) || 0;
         const valInsalubridade = parseFloat(document.getElementById('val_insalubridade_fixo').value) || 0;
         const auxAlimentacao = parseFloat(document.getElementById('auxilio_alimentacao').value) || 0;
         const ressSaude = parseFloat(document.getElementById('ressarcimento_saude').value) || 0;
         const dataInicioStr = document.getElementById('data_inicio').value;
+        const duracaoLicenca = Number(document.getElementById('duracao_licenca').value);
 
         if (!dataInicioStr) {
             alert('Selecione a data de início.');
             return;
         }
 
-        // 1. Calcular Média Variáveis
+        if ([salarioBase, valInsalubridade, auxAlimentacao, ressSaude].some(value => value < 0)) {
+            alert('Os valores não podem ser negativos.');
+            return;
+        }
+
         const inputs = document.querySelectorAll('.table-input');
         let totalSoma = 0;
         inputs.forEach(input => {
-            totalSoma += (parseFloat(input.value) || 0);
+            const value = parseFloat(input.value) || 0;
+            if (value < 0) {
+                totalSoma = NaN;
+                return;
+            }
+            totalSoma += value;
         });
+        if (!Number.isFinite(totalSoma)) {
+            alert('Os valores das rubricas não podem ser negativos.');
+            return;
+        }
         const media = totalSoma / 6;
         
-        // SM = Salário Base + Insalubridade + Média Variáveis
         const salarioMaternidade = salarioBase + valInsalubridade + media;
 
         document.getElementById('res_media').innerText = formatCurrency(media);
         document.getElementById('res_sm').innerText = formatCurrency(salarioMaternidade);
 
-        // 2. Definir Períodos
-        // Licença 120 dias
-        const dInicio = new Date(dataInicioStr + 'T12:00:00');
-        const dFim120 = new Date(dInicio);
-        dFim120.setDate(dInicio.getDate() + 119); // 120 dias contando o início
-
-        // Licença 60 dias (Complementar)
-        const dInicio60 = new Date(dFim120);
-        dInicio60.setDate(dFim120.getDate() + 1);
-        const dFim60 = new Date(dInicio60);
-        dFim60.setDate(dInicio60.getDate() + 59); // 60 dias
-
-        const totalPeriodoStr = `${dInicio.toLocaleDateString()} até ${dFim60.toLocaleDateString()} (180 dias)`;
+        const dInicio = parseLocalDate(dataInicioStr);
+        const dFim = addDays(dInicio, duracaoLicenca - 1);
+        const dFim120 = addDays(dInicio, 119);
+        const dInicio60 = addDays(dFim120, 1);
+        const dFim60 = dFim;
+        const totalPeriodoStr = `${dInicio.toLocaleDateString('pt-BR')} até ${dFim.toLocaleDateString('pt-BR')} (${duracaoLicenca} dias)`;
         document.getElementById('res_periodo').innerText = totalPeriodoStr;
 
-        // 3. Simulação Mensal (Evolução)
         const grid = document.getElementById('evolutionGrid');
         grid.innerHTML = '';
 
-        // Vamos rodar a simulação de meses. 
-        // Segundo o caso, a folha de M verifica o afastamento em M-1.
-        // Simularemos até 2 meses após o fim da licença para ver a normalização.
-        
-        let currentDate = new Date(dInicio.getFullYear(), dInicio.getMonth(), 1);
-        // Queremos começar a mostrar a partir do mês de início da licença.
-        // No exemplo, licença em Junho, folha de Junho é normal.
-        // Então rodamos meses até o fim da licença + delay.
-        
-        const monthsToSimulate = 10; 
+        const monthsToSimulate = duracaoLicenca === 180 ? 10 : 8;
         
         for (let i = 0; i < monthsToSimulate; i++) {
             const simulMonth = new Date(dInicio.getFullYear(), dInicio.getMonth() + i, 1);
             const refMonth = new Date(simulMonth.getFullYear(), simulMonth.getMonth() - 1, 1);
-            
-            // Dias de afastamento no mês de REFERÊNCIA (M-1)
-            let days120 = 0;
-            let days60 = 0;
-            
-            const totalDaysRef = getDaysInMonth(refMonth.getFullYear(), refMonth.getMonth());
-            
-            for (let d = 1; d <= totalDaysRef; d++) {
-                const checkDate = new Date(refMonth.getFullYear(), refMonth.getMonth(), d);
-                if (checkDate >= dInicio && checkDate <= dFim120) {
-                    days120++;
-                } else if (checkDate >= dInicio60 && checkDate <= dFim60) {
-                    days60++;
-                }
-            }
 
+            const totalDaysRef = getDaysInMonth(refMonth.getFullYear(), refMonth.getMonth());
+            const intervaloAfastamento = getRangeInMonth(dInicio, dFim, refMonth.getFullYear(), refMonth.getMonth());
+            const days120 = getRangeInMonth(dInicio, dFim120, refMonth.getFullYear(), refMonth.getMonth())?.days || 0;
+            const days60 = duracaoLicenca > 120
+                ? getRangeInMonth(dInicio60, dFim60, refMonth.getFullYear(), refMonth.getMonth())?.days || 0
+                : 0;
             const totalAfastadoRef = days120 + days60;
+            const intervaloRef = intervaloAfastamento
+                ? `${intervaloAfastamento.start.toLocaleDateString('pt-BR')} a ${intervaloAfastamento.end.toLocaleDateString('pt-BR')}, ${intervaloAfastamento.days} dias`
+                : 'sem afastamento';
 
             // Renderização da Folha
             const card = document.createElement('div');
@@ -518,7 +595,7 @@
             let html = `
                 <div class="month-header">
                     <span class="month-name">${monthsName[simulMonth.getMonth()]} / ${simulMonth.getFullYear()}</span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted)">Ref: ${monthsName[refMonth.getMonth()]}</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-align: right;">Ref: ${monthsName[refMonth.getMonth()]} (${intervaloRef})</span>
                 </div>
                 <div class="folha-body">
                     <div class="folha-item"><span>Salário - CLT</span> <span class="val-pos">${formatCurrency(salarioBase)}</span></div>
@@ -536,8 +613,8 @@
                 pagSM120 = (salarioMaternidade / totalDaysRef) * days120;
                 pagSM60 = (salarioMaternidade / totalDaysRef) * days60;
 
-                html += `<div class="folha-item"><span>Desconto Salário (Afast.)</span> <span class="val-neg">-${formatCurrency(descSalario)}</span></div>`;
-                html += `<div class="folha-item"><span>Desconto Insalub. (Afast.)</span> <span class="val-neg">-${formatCurrency(descInsalub)}</span></div>`;
+                html += `<div class="folha-item"><span>Desconto Salário (${totalAfastadoRef} dias)</span> <span class="val-neg">-${formatCurrency(descSalario)}</span></div>`;
+                html += `<div class="folha-item"><span>Desconto Insalub. (${totalAfastadoRef} dias)</span> <span class="val-neg">-${formatCurrency(descInsalub)}</span></div>`;
                 
                 if (pagSM120 > 0) {
                     html += `<div class="folha-item"><span>SM 120 Dias</span> <span class="val-pos">${formatCurrency(pagSM120)}</span></div>`;
@@ -565,8 +642,7 @@
             card.innerHTML = html;
             grid.appendChild(card);
             
-            // Se já passamos do fim da licença e a folha normalizou, paramos a simulação após 1 mês extra
-            if (simulMonth > dFim60 && totalAfastadoRef === 0) {
+            if (simulMonth > dFim && totalAfastadoRef === 0) {
                 break;
             }
         }
