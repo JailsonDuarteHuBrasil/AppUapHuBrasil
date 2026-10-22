@@ -169,6 +169,20 @@
             font-size: 0.85rem;
         }
 
+        .competence-days-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0 2rem;
+        }
+
+        .competence-days-grid .input-group {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+
         .btn-calc {
             background: linear-gradient(to right, var(--primary), var(--secondary));
             color: white;
@@ -407,6 +421,12 @@
             </table>
         </div>
 
+        <div class="section-title" style="margin-top: 2rem;">Dias considerados por competência</div>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+            O divisor padrão é a quantidade de dias do calendário. Altere somente a competência necessária (por exemplo, informe 27) para recalcular a proporcionalidade daquele mês. Os dias de afastamento continuam sendo contados pelas datas informadas.
+        </p>
+        <div class="competence-days-grid" id="competenceDaysGrid"></div>
+
         <div class="form-actions">
             <button class="btn-calc" type="button" onclick="calcular()">Gerar Relatório de Folhas</button>
             <button class="btn-clear" type="button" onclick="limparDados()">Limpar dados</button>
@@ -447,6 +467,7 @@
 
 <script>
     const monthsName = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const competenceDaysOverrides = new Map();
 
     function formatCurrency(v) {
         return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -501,8 +522,64 @@
         });
     }
 
-    document.getElementById('data_inicio').addEventListener('change', updateMonthLabels);
+    function getCompetenceMonths(dataInicioStr = document.getElementById('data_inicio').value) {
+        if (!dataInicioStr) return [];
+
+        const dataInicio = parseLocalDate(dataInicioStr);
+        const duracao = Number(document.getElementById('duracao_licenca').value);
+        const dataFim = addDays(dataInicio, duracao - 1);
+        const meses = [];
+
+        for (let i = 0; i < 12; i++) {
+            const mesFolha = new Date(dataInicio.getFullYear(), dataInicio.getMonth() + i, 1);
+            const competencia = new Date(mesFolha.getFullYear(), mesFolha.getMonth() - 1, 1);
+            meses.push(competencia);
+            if (mesFolha > dataFim && !getRangeInMonth(dataInicio, dataFim, competencia.getFullYear(), competencia.getMonth())) {
+                break;
+            }
+        }
+        return meses;
+    }
+
+    function updateCompetenceDays() {
+        const grid = document.getElementById('competenceDaysGrid');
+        grid.innerHTML = '';
+
+        for (const competencia of getCompetenceMonths()) {
+            const key = `${competencia.getFullYear()}-${String(competencia.getMonth() + 1).padStart(2, '0')}`;
+            const label = document.createElement('label');
+            label.className = 'input-group';
+            label.htmlFor = `dias-${key}`;
+
+            const title = document.createElement('span');
+            title.textContent = `${monthsName[competencia.getMonth()]} / ${competencia.getFullYear()}`;
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = `dias-${key}`;
+            input.className = 'competence-days-input';
+            input.dataset.competence = key;
+            input.min = '1';
+            input.max = '31';
+            input.step = '1';
+            input.value = competenceDaysOverrides.has(key)
+                ? competenceDaysOverrides.get(key)
+                : String(getDaysInMonth(competencia.getFullYear(), competencia.getMonth()));
+            input.setAttribute('aria-label', `Dias para o divisor da competência ${monthsName[competencia.getMonth()]} de ${competencia.getFullYear()}`);
+            input.addEventListener('input', () => competenceDaysOverrides.set(key, input.value));
+
+            label.append(title, input);
+            grid.appendChild(label);
+        }
+    }
+
+    document.getElementById('data_inicio').addEventListener('change', () => {
+        updateMonthLabels();
+        updateCompetenceDays();
+    });
+    document.getElementById('duracao_licenca').addEventListener('change', updateCompetenceDays);
     updateMonthLabels();
+    updateCompetenceDays();
 
     function limparDados() {
         document.querySelectorAll('input[type="number"]').forEach(input => {
@@ -510,6 +587,7 @@
         });
         document.getElementById('data_inicio').value = '';
         document.getElementById('duracao_licenca').value = '120';
+        competenceDaysOverrides.clear();
         document.getElementById('rubricasBody').querySelectorAll('.table-input').forEach(input => {
             input.value = '0';
         });
@@ -519,6 +597,7 @@
         document.getElementById('res_sm').innerText = formatCurrency(0);
         document.getElementById('res_periodo').innerText = '';
         updateMonthLabels();
+        updateCompetenceDays();
     }
 
     function calcular() {
@@ -553,6 +632,17 @@
             alert('Os valores das rubricas não podem ser negativos.');
             return;
         }
+        const competenceDayInputs = Array.from(document.querySelectorAll('.competence-days-input'));
+        if (competenceDayInputs.some(input => {
+            const days = Number(input.value);
+            return !Number.isInteger(days) || days < 1 || days > 31;
+        })) {
+            alert('Informe um divisor entre 1 e 31 dias para cada competência.');
+            return;
+        }
+        const competenceDayValues = new Map(
+            competenceDayInputs.map(input => [input.dataset.competence, Number(input.value)])
+        );
         const media = totalSoma / 6;
         
         const salarioMaternidade = salarioBase + valInsalubridade + media;
@@ -571,13 +661,14 @@
         const grid = document.getElementById('evolutionGrid');
         grid.innerHTML = '';
 
-        const monthsToSimulate = duracaoLicenca === 180 ? 10 : 8;
+        const competenceMonths = getCompetenceMonths(dataInicioStr);
         
-        for (let i = 0; i < monthsToSimulate; i++) {
+        for (let i = 0; i < competenceMonths.length; i++) {
             const simulMonth = new Date(dInicio.getFullYear(), dInicio.getMonth() + i, 1);
-            const refMonth = new Date(simulMonth.getFullYear(), simulMonth.getMonth() - 1, 1);
+            const refMonth = competenceMonths[i];
 
-            const totalDaysRef = getDaysInMonth(refMonth.getFullYear(), refMonth.getMonth());
+            const competenciaKey = `${refMonth.getFullYear()}-${String(refMonth.getMonth() + 1).padStart(2, '0')}`;
+            const divisorRef = competenceDayValues.get(competenciaKey);
             const intervaloAfastamento = getRangeInMonth(dInicio, dFim, refMonth.getFullYear(), refMonth.getMonth());
             const days120 = getRangeInMonth(dInicio, dFim120, refMonth.getFullYear(), refMonth.getMonth())?.days || 0;
             const days60 = duracaoLicenca > 120
@@ -595,7 +686,7 @@
             let html = `
                 <div class="month-header">
                     <span class="month-name">${monthsName[simulMonth.getMonth()]} / ${simulMonth.getFullYear()}</span>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); text-align: right;">Ref: ${monthsName[refMonth.getMonth()]} (${intervaloRef})</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); text-align: right;">Ref: ${monthsName[refMonth.getMonth()]} (divisor: ${divisorRef} dias; ${intervaloRef})</span>
                 </div>
                 <div class="folha-body">
                     <div class="folha-item"><span>Salário - CLT</span> <span class="val-pos">${formatCurrency(salarioBase)}</span></div>
@@ -608,10 +699,10 @@
             let pagSM60 = 0;
 
             if (totalAfastadoRef > 0) {
-                descSalario = (salarioBase / totalDaysRef) * totalAfastadoRef;
-                descInsalub = (valInsalubridade / totalDaysRef) * totalAfastadoRef;
-                pagSM120 = (salarioMaternidade / totalDaysRef) * days120;
-                pagSM60 = (salarioMaternidade / totalDaysRef) * days60;
+                descSalario = (salarioBase / divisorRef) * totalAfastadoRef;
+                descInsalub = (valInsalubridade / divisorRef) * totalAfastadoRef;
+                pagSM120 = (salarioMaternidade / divisorRef) * days120;
+                pagSM60 = (salarioMaternidade / divisorRef) * days60;
 
                 html += `<div class="folha-item"><span>Desconto Salário (${totalAfastadoRef} dias)</span> <span class="val-neg">-${formatCurrency(descSalario)}</span></div>`;
                 html += `<div class="folha-item"><span>Desconto Insalub. (${totalAfastadoRef} dias)</span> <span class="val-neg">-${formatCurrency(descInsalub)}</span></div>`;
